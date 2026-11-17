@@ -1,0 +1,416 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerified() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'seshusai7@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'email', 'role', 'academicLevel', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'displayName', 'email', 'role', 'academicLevel', 'streakDays', 'totalStudyMinutes', 'dailyTargetQuestions', 'createdAt', 'updatedAt']) &&
+        isValidId(data.uid) &&
+        data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 120 &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.role in ['student', 'admin'] &&
+        data.academicLevel in ['foundation', 'jee_main', 'jee_advanced'] &&
+        (!('streakDays' in data) || (data.streakDays is int && data.streakDays >= 0 && data.streakDays <= 10000)) &&
+        (!('totalStudyMinutes' in data) || (data.totalStudyMinutes is int && data.totalStudyMinutes >= 0 && data.totalStudyMinutes <= 10000000)) &&
+        (!('dailyTargetQuestions' in data) || (data.dailyTargetQuestions is int && data.dailyTargetQuestions >= 1 && data.dailyTargetQuestions <= 500)) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidUserAttempt(data) {
+      return data.keys().hasAll(['attemptId', 'userId', 'chapterId', 'mode', 'score', 'maxScore', 'accuracyPct', 'timeSpentSec', 'totalQuestions', 'correctCount', 'createdAt']) &&
+        data.keys().hasOnly(['attemptId', 'userId', 'chapterId', 'mode', 'score', 'maxScore', 'accuracyPct', 'timeSpentSec', 'totalQuestions', 'correctCount', 'createdAt']) &&
+        isValidId(data.attemptId) &&
+        isValidId(data.userId) &&
+        data.chapterId is string && data.chapterId.size() >= 1 && data.chapterId.size() <= 64 &&
+        data.mode in ['topic_quiz', 'chapter_test', 'mock_main', 'mock_advanced', 'ai_practice'] &&
+        data.score is number && data.score >= -500 && data.score <= 1000 &&
+        data.maxScore is number && data.maxScore >= 1 && data.maxScore <= 1000 &&
+        data.accuracyPct is number && data.accuracyPct >= 0 && data.accuracyPct <= 100 &&
+        data.timeSpentSec is int && data.timeSpentSec >= 0 && data.timeSpentSec <= 86400 &&
+        data.totalQuestions is int && data.totalQuestions >= 1 && data.totalQuestions <= 200 &&
+        data.correctCount is int && data.correctCount >= 0 && data.correctCount <= 200 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidStudyNote(data) {
+      return data.keys().hasAll(['noteId', 'userId', 'chapterId', 'category', 'title', 'body', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['noteId', 'userId', 'chapterId', 'category', 'title', 'body', 'createdAt', 'updatedAt']) &&
+        isValidId(data.noteId) &&
+        isValidId(data.userId) &&
+        data.chapterId is string && data.chapterId.size() >= 1 && data.chapterId.size() <= 64 &&
+        data.category in ['note', 'bookmark', 'mistake'] &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+        data.body is string && data.body.size() >= 1 && data.body.size() <= 4000 &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidFlashcardProgress(data) {
+      return data.keys().hasAll(['cardId', 'userId', 'chapterId', 'box', 'nextReviewEpochMs', 'updatedAt']) &&
+        data.keys().hasOnly(['cardId', 'userId', 'chapterId', 'box', 'nextReviewEpochMs', 'updatedAt']) &&
+        isValidId(data.cardId) &&
+        isValidId(data.userId) &&
+        data.chapterId is string && data.chapterId.size() >= 1 && data.chapterId.size() <= 64 &&
+        data.box is int && data.box >= 1 && data.box <= 6 &&
+        data.nextReviewEpochMs is int && data.nextReviewEpochMs >= 0 &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidManagedContent(data) {
+      return data.keys().hasAll(['contentId', 'chapterId', 'subtopicId', 'title', 'summary', 'workflowStatus', 'sourceLabel', 'authorId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['contentId', 'chapterId', 'subtopicId', 'title', 'summary', 'workflowStatus', 'sourceLabel', 'authorId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.contentId) &&
+        data.chapterId is string && data.chapterId.size() >= 1 && data.chapterId.size() <= 64 &&
+        data.subtopicId is string && data.subtopicId.size() >= 1 && data.subtopicId.size() <= 64 &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+        data.summary is string && data.summary.size() >= 1 && data.summary.size() <= 8000 &&
+        data.workflowStatus in ['GENERATE', 'VALIDATE', 'TEACHER_REVIEW', 'APPROVE', 'PUBLISH'] &&
+        data.sourceLabel in ['Original AI-Generated', 'Academic Director Curated'] &&
+        isValidId(data.authorId) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidQuestionBankEntry(data) {
+      return data.keys().hasAll(['questionId', 'databaseCategory', 'chapterId', 'exam', 'year', 'format', 'difficulty', 'prompt', 'answer', 'solution', 'sourceCitation', 'verified', 'authorId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['questionId', 'databaseCategory', 'chapterId', 'exam', 'year', 'format', 'difficulty', 'prompt', 'answer', 'solution', 'sourceCitation', 'verified', 'authorId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.questionId) &&
+        data.databaseCategory in ['A_VERIFIED_PYQ', 'B_AI_ORIGINAL', 'C_PYQ_INSPIRED'] &&
+        data.chapterId is string && data.chapterId.size() >= 1 && data.chapterId.size() <= 64 &&
+        data.exam is string && data.exam.size() >= 1 && data.exam.size() <= 80 &&
+        data.year is int && data.year >= 1978 && data.year <= 2035 &&
+        data.format in ['single_mcq', 'multiple_mcq', 'numerical', 'integer', 'assertion_reason', 'match', 'paragraph'] &&
+        data.difficulty in ['foundation', 'jee_main', 'jee_advanced'] &&
+        data.prompt is string && data.prompt.size() >= 1 && data.prompt.size() <= 4000 &&
+        data.answer is string && data.answer.size() >= 1 && data.answer.size() <= 500 &&
+        data.solution is string && data.solution.size() >= 1 && data.solution.size() <= 6000 &&
+        data.sourceCitation is string && data.sourceCitation.size() >= 1 && data.sourceCitation.size() <= 300 &&
+        data.verified is bool &&
+        isValidId(data.authorId) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'email', 'name', 'createdAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'name', 'createdAt']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 200 &&
+        data.name is string && data.name.size() >= 1 && data.name.size() <= 120 &&
+        data.createdAt is timestamp;
+    }
+
+    function isValidSyllabusChapter(data) {
+      return data.keys().hasAll(['chapterId', 'chapterNumber', 'title', 'ncertBookPart', 'ncertChapterNumber', 'unitGroup', 'ncertWeightage', 'jeeWeightage', 'estimatedHours', 'overview', 'labId', 'topicCount', 'subtopicCount', 'authorId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['chapterId', 'chapterNumber', 'title', 'ncertBookPart', 'ncertChapterNumber', 'unitGroup', 'ncertWeightage', 'jeeWeightage', 'estimatedHours', 'overview', 'labId', 'topicCount', 'subtopicCount', 'authorId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.chapterId) && data.chapterId.size() <= 64 &&
+        data.chapterNumber is int && data.chapterNumber >= 1 && data.chapterNumber <= 14 &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 160 &&
+        data.ncertBookPart in ['Part I', 'Part II'] &&
+        data.ncertChapterNumber is int && data.ncertChapterNumber >= 1 && data.ncertChapterNumber <= 15 &&
+        data.unitGroup in ['Mechanics', 'Properties of Matter', 'Thermal Physics', 'Oscillations & Waves'] &&
+        data.ncertWeightage is string && data.ncertWeightage.size() >= 1 && data.ncertWeightage.size() <= 64 &&
+        data.jeeWeightage is string && data.jeeWeightage.size() >= 1 && data.jeeWeightage.size() <= 80 &&
+        data.estimatedHours is int && data.estimatedHours >= 1 && data.estimatedHours <= 100 &&
+        data.overview is string && data.overview.size() >= 1 && data.overview.size() <= 1200 &&
+        isValidId(data.labId) && data.labId.size() <= 64 &&
+        data.topicCount is int && data.topicCount >= 1 && data.topicCount <= 50 &&
+        data.subtopicCount is int && data.subtopicCount >= 1 && data.subtopicCount <= 200 &&
+        isValidId(data.authorId) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSyllabusTopic(data) {
+      return data.keys().hasAll(['topicId', 'chapterId', 'order', 'code', 'title', 'ncertSectionRef', 'curriculumScope', 'isEnrichment', 'targetLevels', 'linkedContentSubtopicId', 'authorId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['topicId', 'chapterId', 'order', 'code', 'title', 'ncertSectionRef', 'curriculumScope', 'isEnrichment', 'targetLevels', 'linkedContentSubtopicId', 'authorId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.topicId) &&
+        isValidId(data.chapterId) && data.chapterId.size() <= 64 &&
+        data.order is int && data.order >= 1 && data.order <= 50 &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 24 &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 200 &&
+        data.ncertSectionRef is string && data.ncertSectionRef.size() >= 1 && data.ncertSectionRef.size() <= 80 &&
+        data.curriculumScope in ['NCERT Core', 'NCERT + JEE Main', 'JEE Main & Adv', 'Enrichment'] &&
+        data.isEnrichment is bool &&
+        data.targetLevels is list && data.targetLevels.size() >= 1 && data.targetLevels.size() <= 3 &&
+        data.targetLevels.hasOnly(['foundation', 'jee_main', 'jee_advanced']) &&
+        isValidId(data.linkedContentSubtopicId) && data.linkedContentSubtopicId.size() <= 64 &&
+        isValidId(data.authorId) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    function isValidSyllabusSubtopic(data) {
+      return data.keys().hasAll(['subtopicId', 'topicId', 'chapterId', 'order', 'code', 'title', 'ncertAligned', 'jeeMainAligned', 'jeeAdvancedAligned', 'enrichmentOnly', 'keyConcepts', 'linkedContentSubtopicId', 'authorId', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['subtopicId', 'topicId', 'chapterId', 'order', 'code', 'title', 'ncertAligned', 'jeeMainAligned', 'jeeAdvancedAligned', 'enrichmentOnly', 'keyConcepts', 'linkedContentSubtopicId', 'authorId', 'createdAt', 'updatedAt']) &&
+        isValidId(data.subtopicId) &&
+        isValidId(data.topicId) &&
+        isValidId(data.chapterId) && data.chapterId.size() <= 64 &&
+        data.order is int && data.order >= 1 && data.order <= 50 &&
+        data.code is string && data.code.size() >= 1 && data.code.size() <= 24 &&
+        data.title is string && data.title.size() >= 1 && data.title.size() <= 220 &&
+        data.ncertAligned is bool &&
+        data.jeeMainAligned is bool &&
+        data.jeeAdvancedAligned is bool &&
+        data.enrichmentOnly is bool &&
+        data.keyConcepts is list && data.keyConcepts.size() >= 1 && data.keyConcepts.size() <= 10 &&
+        data.keyConcepts[0] is string && data.keyConcepts[0].size() >= 1 && data.keyConcepts[0].size() <= 160 &&
+        isValidId(data.linkedContentSubtopicId) && data.linkedContentSubtopicId.size() <= 64 &&
+        isValidId(data.authorId) &&
+        data.createdAt is timestamp &&
+        data.updatedAt is timestamp;
+    }
+
+    // User Profiles (PII isolated to owner or verified admin)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) &&
+        (isOwner(userId) || isAdmin()) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == userId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (incoming().role == 'student' || isAdmin());
+      allow update: if isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            isOwner(userId) &&
+            incoming().role == existing().role &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'academicLevel', 'streakDays', 'totalStudyMinutes', 'dailyTargetQuestions', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+
+      // Master Gate subcollection: Quiz/Mock Test Attempts
+      match /attempts/{attemptId} {
+        allow get: if isValidId(userId) && isValidId(attemptId) && (isOwner(userId) || isAdmin());
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow create: if isValidId(userId) && isValidId(attemptId) &&
+          (isOwner(userId) || isAdmin()) &&
+          isValidUserAttempt(incoming()) &&
+          incoming().attemptId == attemptId &&
+          incoming().userId == userId &&
+          incoming().createdAt == request.time &&
+          exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if false;
+        allow delete: if isValidId(userId) && isValidId(attemptId) && (isOwner(userId) || isAdmin());
+      }
+
+      // Master Gate subcollection: Student Notes, Bookmarks, Mistakes
+      match /notes/{noteId} {
+        allow get: if isValidId(userId) && isValidId(noteId) && (isOwner(userId) || isAdmin());
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow create: if isValidId(userId) && isValidId(noteId) &&
+          (isOwner(userId) || isAdmin()) &&
+          isValidStudyNote(incoming()) &&
+          incoming().noteId == noteId &&
+          incoming().userId == userId &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if isValidId(userId) && isValidId(noteId) &&
+          isValidStudyNote(incoming()) &&
+          incoming().noteId == existing().noteId &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          (isOwner(userId) || isAdmin()) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'body', 'category', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(noteId) && (isOwner(userId) || isAdmin());
+      }
+
+      // Master Gate subcollection: Spaced Repetition Flashcard Progress
+      match /flashcards/{cardId} {
+        allow get: if isValidId(userId) && isValidId(cardId) && (isOwner(userId) || isAdmin());
+        allow list: if isValidId(userId) && (isOwner(userId) || isAdmin());
+        allow create: if isValidId(userId) && isValidId(cardId) &&
+          (isOwner(userId) || isAdmin()) &&
+          isValidFlashcardProgress(incoming()) &&
+          incoming().cardId == cardId &&
+          incoming().userId == userId &&
+          incoming().updatedAt == request.time &&
+          exists(/databases/$(database)/documents/users/$(userId));
+        allow update: if isValidId(userId) && isValidId(cardId) &&
+          isValidFlashcardProgress(incoming()) &&
+          incoming().cardId == existing().cardId &&
+          incoming().userId == existing().userId &&
+          incoming().updatedAt == request.time &&
+          (isOwner(userId) || isAdmin()) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['box', 'nextReviewEpochMs', 'updatedAt']);
+        allow delete: if isValidId(userId) && isValidId(cardId) && (isOwner(userId) || isAdmin());
+      }
+    }
+
+    // Teacher-Curated & Approved Textbook Modules
+    match /managedContent/{contentId} {
+      allow get: if isValidId(contentId) && (isAdmin() || (isVerified() && existing().workflowStatus == 'PUBLISH'));
+      allow list: if isAdmin() || (isVerified() && resource.data.workflowStatus == 'PUBLISH');
+      allow create: if isValidId(contentId) &&
+        isAdmin() &&
+        isValidManagedContent(incoming()) &&
+        incoming().contentId == contentId &&
+        incoming().authorId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(contentId) &&
+        isAdmin() &&
+        isValidManagedContent(incoming()) &&
+        incoming().contentId == existing().contentId &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['title', 'summary', 'workflowStatus', 'sourceLabel', 'subtopicId', 'updatedAt']);
+      allow delete: if isValidId(contentId) && isAdmin();
+    }
+
+    // Historical PYQ & Curated Question Bank
+    match /questionBank/{questionId} {
+      allow get: if isValidId(questionId) && (isAdmin() || isVerified());
+      allow list: if isAdmin() || isVerified();
+      allow create: if isValidId(questionId) &&
+        isAdmin() &&
+        isValidQuestionBankEntry(incoming()) &&
+        incoming().questionId == questionId &&
+        incoming().authorId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(questionId) &&
+        isAdmin() &&
+        isValidQuestionBankEntry(incoming()) &&
+        incoming().questionId == existing().questionId &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['databaseCategory', 'chapterId', 'exam', 'year', 'format', 'difficulty', 'prompt', 'answer', 'solution', 'sourceCitation', 'verified', 'updatedAt']);
+      allow delete: if isValidId(questionId) && isAdmin();
+    }
+
+    // Admin Registry
+    match /admins/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isValidId(userId) &&
+        isAdmin() &&
+        isValidAdminRecord(incoming()) &&
+        incoming().uid == userId &&
+        incoming().createdAt == request.time;
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 14-Chapter Class 11 Physics Structural Syllabus Hierarchy (Chapters -> Topics -> Subtopics)
+    match /syllabus/{chapterId} {
+      allow get: if isValidId(chapterId) && (isAdmin() || isVerified());
+      allow list: if isAdmin() || isVerified();
+      allow create: if isValidId(chapterId) &&
+        isAdmin() &&
+        isValidSyllabusChapter(incoming()) &&
+        incoming().chapterId == chapterId &&
+        incoming().authorId == request.auth.uid &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(chapterId) &&
+        isAdmin() &&
+        isValidSyllabusChapter(incoming()) &&
+        incoming().chapterId == existing().chapterId &&
+        incoming().authorId == existing().authorId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['chapterNumber', 'title', 'ncertBookPart', 'ncertChapterNumber', 'unitGroup', 'ncertWeightage', 'jeeWeightage', 'estimatedHours', 'overview', 'labId', 'topicCount', 'subtopicCount', 'updatedAt']);
+      allow delete: if isValidId(chapterId) && isAdmin();
+
+      match /topics/{topicId} {
+        allow get: if isValidId(chapterId) && isValidId(topicId) && (isAdmin() || isVerified());
+        allow list: if isValidId(chapterId) && (isAdmin() || isVerified());
+        allow create: if isValidId(chapterId) && isValidId(topicId) &&
+          isAdmin() &&
+          isValidSyllabusTopic(incoming()) &&
+          incoming().topicId == topicId &&
+          incoming().chapterId == chapterId &&
+          incoming().authorId == request.auth.uid &&
+          incoming().createdAt == request.time &&
+          incoming().updatedAt == request.time &&
+          existsAfter(/databases/$(database)/documents/syllabus/$(chapterId));
+        allow update: if isValidId(chapterId) && isValidId(topicId) &&
+          isAdmin() &&
+          isValidSyllabusTopic(incoming()) &&
+          incoming().topicId == existing().topicId &&
+          incoming().chapterId == existing().chapterId &&
+          incoming().authorId == existing().authorId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().updatedAt == request.time &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['order', 'code', 'title', 'ncertSectionRef', 'curriculumScope', 'isEnrichment', 'targetLevels', 'linkedContentSubtopicId', 'updatedAt']);
+        allow delete: if isValidId(chapterId) && isValidId(topicId) && isAdmin();
+
+        match /subtopics/{subtopicId} {
+          allow get: if isValidId(chapterId) && isValidId(topicId) && isValidId(subtopicId) && (isAdmin() || isVerified());
+          allow list: if isValidId(chapterId) && isValidId(topicId) && (isAdmin() || isVerified());
+          allow create: if isValidId(chapterId) && isValidId(topicId) && isValidId(subtopicId) &&
+            isAdmin() &&
+            isValidSyllabusSubtopic(incoming()) &&
+            incoming().subtopicId == subtopicId &&
+            incoming().topicId == topicId &&
+            incoming().chapterId == chapterId &&
+            incoming().authorId == request.auth.uid &&
+            incoming().createdAt == request.time &&
+            incoming().updatedAt == request.time &&
+            existsAfter(/databases/$(database)/documents/syllabus/$(chapterId)) &&
+            existsAfter(/databases/$(database)/documents/syllabus/$(chapterId)/topics/$(topicId));
+          allow update: if isValidId(chapterId) && isValidId(topicId) && isValidId(subtopicId) &&
+            isAdmin() &&
+            isValidSyllabusSubtopic(incoming()) &&
+            incoming().subtopicId == existing().subtopicId &&
+            incoming().topicId == existing().topicId &&
+            incoming().chapterId == existing().chapterId &&
+            incoming().authorId == existing().authorId &&
+            incoming().createdAt == existing().createdAt &&
+            incoming().updatedAt == request.time &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['order', 'code', 'title', 'ncertAligned', 'jeeMainAligned', 'jeeAdvancedAligned', 'enrichmentOnly', 'keyConcepts', 'linkedContentSubtopicId', 'updatedAt']);
+          allow delete: if isValidId(chapterId) && isValidId(topicId) && isValidId(subtopicId) && isAdmin();
+        }
+      }
+    }
+  }
+}

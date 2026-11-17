@@ -1,0 +1,8 @@
+{
+  "name": "MASTER JEE – Class 11 Physics",
+  "description": "AI-powered Class 11 Physics learning platform, digital textbook, derivation engine, 40-year PYQ archive, virtual laboratory, and JEE Main/Advanced preparation system by Dr. V. Sesha Sai Kumar (GRIET, Hyderabad).",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,234 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Student or administrator profile and learning preferences.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "role": { "type": "string", "enum": ["student", "admin"] },
+        "academicLevel": { "type": "string", "enum": ["foundation", "jee_main", "jee_advanced"] },
+        "streakDays": { "type": "integer" },
+        "totalStudyMinutes": { "type": "integer" },
+        "dailyTargetQuestions": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "role", "academicLevel", "createdAt", "updatedAt"]
+    },
+    "UserAttempt": {
+      "title": "UserAttempt",
+      "description": "Quiz or mock test attempt record owned by a user.",
+      "type": "object",
+      "properties": {
+        "attemptId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chapterId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "mode": { "type": "string", "enum": ["topic_quiz", "chapter_test", "mock_main", "mock_advanced", "ai_practice"] },
+        "score": { "type": "number" },
+        "maxScore": { "type": "number" },
+        "accuracyPct": { "type": "number" },
+        "timeSpentSec": { "type": "integer" },
+        "totalQuestions": { "type": "integer" },
+        "correctCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["attemptId", "userId", "chapterId", "mode", "score", "maxScore", "accuracyPct", "timeSpentSec", "totalQuestions", "correctCount", "createdAt"]
+    },
+    "StudyNote": {
+      "title": "StudyNote",
+      "description": "Student personal note, mistake entry, or bookmark.",
+      "type": "object",
+      "properties": {
+        "noteId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chapterId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "category": { "type": "string", "enum": ["note", "bookmark", "mistake"] },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "body": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["noteId", "userId", "chapterId", "category", "title", "body", "createdAt", "updatedAt"]
+    },
+    "FlashcardProgress": {
+      "title": "FlashcardProgress",
+      "description": "Spaced repetition state for a flashcard owned by a user.",
+      "type": "object",
+      "properties": {
+        "cardId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chapterId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "box": { "type": "integer" },
+        "nextReviewEpochMs": { "type": "integer" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["cardId", "userId", "chapterId", "box", "nextReviewEpochMs", "updatedAt"]
+    },
+    "ManagedContent": {
+      "title": "ManagedContent",
+      "description": "Teacher-curated or AI-generated chapter content under approval workflow.",
+      "type": "object",
+      "properties": {
+        "contentId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chapterId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "subtopicId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "summary": { "type": "string", "minLength": 1, "maxLength": 8000 },
+        "workflowStatus": { "type": "string", "enum": ["GENERATE", "VALIDATE", "TEACHER_REVIEW", "APPROVE", "PUBLISH"] },
+        "sourceLabel": { "type": "string", "enum": ["Original AI-Generated", "Academic Director Curated"] },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["contentId", "chapterId", "subtopicId", "title", "summary", "workflowStatus", "sourceLabel", "authorId", "createdAt", "updatedAt"]
+    },
+    "QuestionBankEntry": {
+      "title": "QuestionBankEntry",
+      "description": "Verified historical PYQ or categorized practice question.",
+      "type": "object",
+      "properties": {
+        "questionId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "databaseCategory": { "type": "string", "enum": ["A_VERIFIED_PYQ", "B_AI_ORIGINAL", "C_PYQ_INSPIRED"] },
+        "chapterId": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "exam": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "year": { "type": "integer" },
+        "format": { "type": "string", "enum": ["single_mcq", "multiple_mcq", "numerical", "integer", "assertion_reason", "match", "paragraph"] },
+        "difficulty": { "type": "string", "enum": ["foundation", "jee_main", "jee_advanced"] },
+        "prompt": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "answer": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "solution": { "type": "string", "minLength": 1, "maxLength": 6000 },
+        "sourceCitation": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "verified": { "type": "boolean" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["questionId", "databaseCategory", "chapterId", "exam", "year", "format", "difficulty", "prompt", "answer", "solution", "sourceCitation", "verified", "authorId", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Authorized academic administrator marker.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "format": "email", "maxLength": 200 },
+        "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "name", "createdAt"]
+    },
+    "SyllabusChapter": {
+      "title": "SyllabusChapter",
+      "description": "Top-level Class 11 Physics chapter metadata aligned to NCERT and JEE curricula.",
+      "type": "object",
+      "properties": {
+        "chapterId": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chapterNumber": { "type": "integer" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 160 },
+        "ncertBookPart": { "type": "string", "enum": ["Part I", "Part II"] },
+        "ncertChapterNumber": { "type": "integer" },
+        "unitGroup": { "type": "string", "enum": ["Mechanics", "Properties of Matter", "Thermal Physics", "Oscillations & Waves"] },
+        "ncertWeightage": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "jeeWeightage": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "estimatedHours": { "type": "integer" },
+        "overview": { "type": "string", "minLength": 1, "maxLength": 1200 },
+        "labId": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "topicCount": { "type": "integer" },
+        "subtopicCount": { "type": "integer" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chapterId", "chapterNumber", "title", "ncertBookPart", "ncertChapterNumber", "unitGroup", "ncertWeightage", "jeeWeightage", "estimatedHours", "overview", "labId", "topicCount", "subtopicCount", "authorId", "createdAt", "updatedAt"]
+    },
+    "SyllabusTopic": {
+      "title": "SyllabusTopic",
+      "description": "Topic node belonging to a Class 11 Physics chapter with NCERT section and JEE scope mapping.",
+      "type": "object",
+      "properties": {
+        "topicId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chapterId": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "order": { "type": "integer" },
+        "code": { "type": "string", "minLength": 1, "maxLength": 24 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "ncertSectionRef": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "curriculumScope": { "type": "string", "enum": ["NCERT Core", "NCERT + JEE Main", "JEE Main & Adv", "Enrichment"] },
+        "isEnrichment": { "type": "boolean" },
+        "targetLevels": { "type": "array", "items": { "type": "string" } },
+        "linkedContentSubtopicId": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["topicId", "chapterId", "order", "code", "title", "ncertSectionRef", "curriculumScope", "isEnrichment", "targetLevels", "linkedContentSubtopicId", "authorId", "createdAt", "updatedAt"]
+    },
+    "SyllabusSubtopic": {
+      "title": "SyllabusSubtopic",
+      "description": "Granular subtopic node nested under a syllabus topic with explicit NCERT/JEE alignment flags.",
+      "type": "object",
+      "properties": {
+        "subtopicId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "topicId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "chapterId": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "order": { "type": "integer" },
+        "code": { "type": "string", "minLength": 1, "maxLength": 24 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 220 },
+        "ncertAligned": { "type": "boolean" },
+        "jeeMainAligned": { "type": "boolean" },
+        "jeeAdvancedAligned": { "type": "boolean" },
+        "enrichmentOnly": { "type": "boolean" },
+        "keyConcepts": { "type": "array", "items": { "type": "string" } },
+        "linkedContentSubtopicId": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subtopicId", "topicId", "chapterId", "order", "code", "title", "ncertAligned", "jeeMainAligned", "jeeAdvancedAligned", "enrichmentOnly", "keyConcepts", "linkedContentSubtopicId", "authorId", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile document; PII isolated to owner and verified admin."
+    },
+    "/users/{userId}/attempts/{attemptId}": {
+      "schema": { "$ref": "#/entities/UserAttempt" },
+      "description": "Quiz and mock test attempts owned by the user."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": { "$ref": "#/entities/StudyNote" },
+      "description": "Student personal notes, bookmarks, and mistake notebook entries."
+    },
+    "/users/{userId}/flashcards/{cardId}": {
+      "schema": { "$ref": "#/entities/FlashcardProgress" },
+      "description": "Spaced-repetition card schedules owned by the user."
+    },
+    "/managedContent/{contentId}": {
+      "schema": { "$ref": "#/entities/ManagedContent" },
+      "description": "Teacher-approved and AI-generated textbook modules."
+    },
+    "/questionBank/{questionId}": {
+      "schema": { "$ref": "#/entities/QuestionBankEntry" },
+      "description": "Verified PYQs and teacher-imported question bank entries."
+    },
+    "/admins/{userId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Administrator role registry."
+    },
+    "/syllabus/{chapterId}": {
+      "schema": { "$ref": "#/entities/SyllabusChapter" },
+      "description": "Structural metadata for each of the 14 Class 11 Physics syllabus chapters."
+    },
+    "/syllabus/{chapterId}/topics/{topicId}": {
+      "schema": { "$ref": "#/entities/SyllabusTopic" },
+      "description": "Topic hierarchy nested under each Class 11 Physics chapter."
+    },
+    "/syllabus/{chapterId}/topics/{topicId}/subtopics/{subtopicId}": {
+      "schema": { "$ref": "#/entities/SyllabusSubtopic" },
+      "description": "Granular NCERT and JEE aligned subtopics nested under each topic."
+    }
+  }
+}
